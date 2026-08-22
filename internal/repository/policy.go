@@ -29,3 +29,15 @@ func (r *Repositories) SaveApproval(ctx context.Context, a domain.Approval) erro
 	_, e := r.DB.SQL.ExecContext(ctx, `INSERT INTO approvals(id,tenant_id,mission_id,policy_id,policy_revision,decision,decided_by,decided_at) VALUES(?,?,?,?,?,?,?,?)`, a.ID, a.TenantID, a.MissionID, a.PolicyID, a.PolicyRevision, a.Decision, a.DecidedBy, d)
 	return wrap("save approval", e)
 }
+
+func (r *Repositories) UpdatePolicyState(ctx context.Context, tenant, name string, revision int, state string) error {
+	res, err := r.DB.SQL.ExecContext(ctx, `UPDATE policies SET state=?,updated_at=? WHERE tenant_id=? AND name=? AND revision=?`, state, r.Clock.Now().UTC().Format(time.RFC3339Nano), tenant, name, revision)
+	if err != nil {
+		return wrap("update policy state", err)
+	}
+	n, _ := res.RowsAffected()
+	if n != 1 {
+		return domain.ErrConflict
+	}
+	return nil
+}

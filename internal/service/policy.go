@@ -26,7 +26,7 @@ func (s *Service) ApprovePolicy(ctx context.Context, tenant, name string, revisi
 	}
 	p.State = "approved"
 	p.UpdatedAt = s.now()
-	if e = s.Repos.SavePolicy(ctx, p); e != nil {
+	if e = s.Repos.UpdatePolicyState(ctx, tenant, name, revision, p.State); e != nil {
 		return p, e
 	}
 	return p, nil
