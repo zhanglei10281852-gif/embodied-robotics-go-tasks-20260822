@@ -33,5 +33,8 @@ func (m *Maintenance) Run(ctx context.Context, tenant string, fn func(context.Co
 		return errors.New("maintenance already running")
 	}
 	defer m.Finish()
-	return fn(context.Background())
+	if e := ctx.Err(); e != nil {
+		return e
+	}
+	return fn(ctx)
 }
