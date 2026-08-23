@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"github.com/zhanglei10281852-gif/embodied-robotics-go-tasks-20260822/internal/domain"
 	"github.com/zhanglei10281852-gif/embodied-robotics-go-tasks-20260822/internal/repository"
 	"github.com/zhanglei10281852-gif/embodied-robotics-go-tasks-20260822/internal/storage"
@@ -71,5 +72,31 @@ func TestTelemetryAlertsAndCancellation(t *testing.T) {
 	cancel()
 	if _, e = s.RenewHandoff(c, domain.Handoff{LeaseUntil: time.Now().Add(time.Minute)}, time.Minute); e == nil {
 		t.Fatal("expected cancellation")
+	}
+}
+
+// TestTelemetryWriteCancelledContext ensures that a caller-cancelled context
+// short-circuits the write: the call returns the cancellation error and the
+// event is never persisted.
+func TestTelemetryWriteCancelledContext(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+	r, _ := s.RegisterRobot(ctx, "tenant", RobotInput{Serial: "R-CX", Name: "cx"})
+
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+
+	if _, e := s.RecordTelemetry(cancelled, "tenant", r.ID, "pose", 1, map[string]any{"x": 1}); !errors.Is(e, context.Canceled) {
+		t.Fatalf("expected context.Canceled, got %v", e)
+	}
+
+	page, e := s.ReadTelemetry(ctx, "tenant", r.ID, time.Now().Add(time.Hour), 100)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, ev := range page.Items {
+		if ev.RobotID == r.ID {
+			t.Fatalf("cancelled event should not be persisted: %+v", ev)
+		}
 	}
 }

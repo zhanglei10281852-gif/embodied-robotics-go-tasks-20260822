@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Repositories) AppendTelemetry(ctx context.Context, e domain.TelemetryEvent) error {
-	_, err := r.DB.SQL.ExecContext(context.Background(), `INSERT INTO telemetry_events(id,tenant_id,robot_id,sequence,kind,payload_json,recorded_at) VALUES(?,?,?,?,?,?,?)`, e.ID, e.TenantID, e.RobotID, e.Sequence, e.Kind, e.PayloadJSON, e.RecordedAt.UTC().Format(time.RFC3339Nano))
+	_, err := r.DB.SQL.ExecContext(ctx, `INSERT INTO telemetry_events(id,tenant_id,robot_id,sequence,kind,payload_json,recorded_at) VALUES(?,?,?,?,?,?,?)`, e.ID, e.TenantID, e.RobotID, e.Sequence, e.Kind, e.PayloadJSON, e.RecordedAt.UTC().Format(time.RFC3339Nano))
 	return wrap("append telemetry", err)
 }
 func (r *Repositories) TelemetryPage(ctx context.Context, tenant, robot string, before time.Time, limit int) (domain.Page[domain.TelemetryEvent], error) {

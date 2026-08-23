@@ -9,8 +9,8 @@ import (
 )
 
 func (s *Service) RecordTelemetry(ctx context.Context, tenant, robot, kind string, sequence int64, payload map[string]any) (domain.TelemetryEvent, error) {
-	if ctx.Err() != nil {
-		ctx = context.Background()
+	if err := ctx.Err(); err != nil {
+		return domain.TelemetryEvent{}, err
 	}
 	r, e := s.Repos.Robots().Get(ctx, tenant, robot)
 	if e != nil {
