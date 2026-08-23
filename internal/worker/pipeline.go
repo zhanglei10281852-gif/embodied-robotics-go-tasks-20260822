@@ -39,13 +39,13 @@ func (p *Pipeline) Stages() []PipelineStage {
 	return append([]PipelineStage(nil), p.stages...)
 }
 func (p *Pipeline) Execute(ctx context.Context, fn func(context.Context, PipelineStage) error) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
 	for _, stage := range p.Stages() {
-		e := fn(context.Background(), stage)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		e := fn(ctx, stage)
 		p.mu.Lock()
 		p.events = append(p.events, PipelineEvent{Stage: stage, At: time.Now().UTC(), Err: e})
 		p.mu.Unlock()
