@@ -73,3 +73,24 @@ func TestTelemetryAlertsAndCancellation(t *testing.T) {
 		t.Fatal("expected cancellation")
 	}
 }
+func TestAcknowledgeAlertRespectsCancellation(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+	r, _ := s.RegisterRobot(ctx, "tenant", RobotInput{Serial: "R-3", Name: "gamma"})
+	a, e := s.RaiseAlert(ctx, "tenant", r.ID, "battery", "high", "low")
+	if e != nil {
+		t.Fatal(e)
+	}
+	c, cancel := context.WithCancel(ctx)
+	cancel()
+	if e = s.AcknowledgeAlert(c, "tenant", a.ID); e == nil {
+		t.Fatal("expected cancellation error")
+	}
+	got, e := s.Repos.GetAlert(ctx, "tenant", a.ID)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got.State != domain.AlertOpen {
+		t.Fatalf("alert should remain open, got %s", got.State)
+	}
+}

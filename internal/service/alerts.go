@@ -18,7 +18,11 @@ func (s *Service) RaiseAlert(ctx context.Context, tenant, robot, key, severity, 
 	return a, nil
 }
 func (s *Service) AcknowledgeAlert(ctx context.Context, tenant, id string) error {
-	ctx = context.Background()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
 	a, e := s.Repos.GetAlert(ctx, tenant, id)
 	if e != nil {
 		return e
