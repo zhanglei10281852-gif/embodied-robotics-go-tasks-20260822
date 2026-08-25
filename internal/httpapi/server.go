@@ -43,7 +43,7 @@ func (s *Server) createRobot(w http.ResponseWriter, r *http.Request) {
 	write(w, 201, robot)
 }
 func (s *Server) createMission(w http.ResponseWriter, r *http.Request) {
-	r = r.WithContext(context.Background())
+	ctx := r.Context()
 	var in struct {
 		TenantID, RobotID       string
 		Priority, PolicyVersion int
@@ -54,7 +54,7 @@ func (s *Server) createMission(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "invalid json")
 		return
 	}
-	m, e := s.Service.CreateMission(r.Context(), in.TenantID, service.MissionInput{RobotID: in.RobotID, Priority: in.Priority, PolicyVersion: in.PolicyVersion, Steps: in.Steps, IdempotencyKey: in.IdempotencyKey})
+	m, e := s.Service.CreateMission(ctx, in.TenantID, service.MissionInput{RobotID: in.RobotID, Priority: in.Priority, PolicyVersion: in.PolicyVersion, Steps: in.Steps, IdempotencyKey: in.IdempotencyKey})
 	if e != nil {
 		writeServiceErr(w, e)
 		return
@@ -95,6 +95,10 @@ func writeErr(w http.ResponseWriter, status int, msg string) {
 	write(w, status, map[string]string{"error": msg})
 }
 func writeServiceErr(w http.ResponseWriter, e error) {
+	if errors.Is(e, context.Canceled) {
+		writeErrorEnvelope(w, 499, "client_closed", "client disconnected before completion", nil)
+		return
+	}
 	status := 500
 	if errors.Is(e, domain.ErrNotFound) {
 		status = 404
