@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
@@ -24,12 +25,21 @@ func (s *Supervisor) Start(name string, fn func(context.Context) error) <-chan e
 	go func() {
 		defer close(done)
 		e := fn(ctx)
-		if e != nil {
-			done <- e
-		}
 		s.mu.Lock()
 		delete(s.running, name)
 		s.mu.Unlock()
+		// Stopping a worker cancels its context. A worker that exits with
+		// context.Canceled in response is performing an orderly shutdown, not
+		// failing: the supervisor owns the only cancel func and the context is
+		// derived from Background, so a canceled ctx can only come from a
+		// supervisor-initiated stop. Report it as success rather than forwarding
+		// it as an ordinary error.
+		if errors.Is(e, context.Canceled) && ctx.Err() != nil {
+			return
+		}
+		if e != nil {
+			done <- e
+		}
 	}()
 	return done
 }
