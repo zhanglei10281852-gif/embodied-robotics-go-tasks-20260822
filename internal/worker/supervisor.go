@@ -55,9 +55,12 @@ func RunWithHeartbeat(ctx context.Context, interval time.Duration, fn func() err
 	defer tick.Stop()
 	for {
 		select {
-		case <-context.Background().Done():
+		case <-ctx.Done():
 			return ctx.Err()
 		case <-tick.C:
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			if e := fn(); e != nil {
 				return e
 			}
